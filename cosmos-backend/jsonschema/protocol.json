@@ -1,0 +1,305 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "additionalProperties": true,
+    "required": ["type"],
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": ["RECORD", "STATE", "LOG", "SPEC", "CONNECTION_STATUS", "CATALOG", "CONFIGURED_CATALOG"]
+        }
+    },
+
+    "allOf": [
+        {
+            "if": {
+                "properties": {"type": {"const": "RECORD"}}
+            },
+            "then": {
+                "properties": {"record": {"$ref": "#/definitions/RecordMessage"}},
+                "required": ["record"]
+            }
+        },
+        {
+            "if": {
+                "properties": {"type": {"const": "STATE"}}
+            },
+            "then": {
+                "properties": {"state": {"$ref": "#/definitions/StateMessage"}},
+                "required": ["state"]
+            }
+        },
+        {
+            "if": {
+                "properties": {"type": {"const": "LOG"}}
+            },
+            "then": {
+                "properties": {"log": {"$ref": "#/definitions/LogMessage"}},
+                "required": ["log"]
+            }
+        },
+        {
+            "if": {
+                "properties": {"type": {"const": "SPEC"}}
+            },
+            "then": {
+                "properties": {"spec": {"$ref": "#/definitions/SpecMessage"}},
+                "required": ["spec"]
+            }
+        },
+        {
+            "if": {
+                "properties": {"type": {"const": "CONNECTION_STATUS"}}
+            },
+            "then": {
+                "properties": {"connectionStatus": {"$ref": "#/definitions/ConnectionStatusMessage"}},
+                "required": ["connectionStatus"]
+            }
+        },
+        {
+            "if": {
+                "properties": {"type": {"const": "CATALOG"}}
+            },
+            "then": {
+                "properties": {"catalog": {"$ref": "#/definitions/CatalogMessage"}},
+                "required": ["catalog"]
+            }
+        },
+        {
+            "if": {
+                "properties": {"type": {"const": "CONFIGURED_CATALOG"}}
+            },
+            "then": {
+                "properties": {"configuredCatalog": {"$ref": "#/definitions/ConfiguredCatalogMessage"}},
+                "required": ["configuredCatalog"]
+            }
+        }
+    ],
+
+    "definitions": {
+        "RecordMessage": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["stream", "data", "emitted_at"],
+            "properties": {
+                "stream": {"type": "string"},
+                "data": {"type": "object"},
+                "emitted_at": {"type": "integer"},
+                "namespace": {"type": "string"}
+            }
+        },
+
+        "StateMessage": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["data"],
+            "properties": {
+                "data": {"type": "object"}
+            }
+        },
+
+        "LogMessage": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["level", "message"],
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "enum": ["FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"]
+                },
+                "message": {"type": "string"}
+            }
+        },
+
+        "SpecMessage": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["connectionSpecification"],
+            "properties": {
+                "connectionSpecification": {
+                    "type": "object",
+                    "required": ["properties"],
+                    "properties": {
+                        "properties": {"type": "object"},
+                        "required": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        }
+                    }
+                },
+                "documentationUrl": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "changelogUrl": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "supportsIncremental": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "supportsNormalization": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "supportsDBT": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "supported_destination_sync_modes": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/DestinationSyncMode"}
+                }
+            }
+        },
+
+        "ConnectionStatusMessage": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["status"],
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["SUCCEEDED", "FAILED"]
+                },
+                "message": {"type": "string"}
+            }
+        },
+
+        "CatalogMessage": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["streams"],
+            "properties": {
+                "streams": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/Stream"}
+                }
+            }
+        },
+
+        "Stream": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["name", "json_schema"],
+            "properties": {
+                "name": {"type": "string"},
+                "json_schema": {
+                    "type": "object",
+                    "required": ["properties"],
+                    "properties": {
+                        "properties": {"type": "object"}
+                    }
+                },
+                "supported_sync_modes": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/SyncMode"}
+                },
+                "source_defined_cursor": {
+                    "type": "boolean"
+                },
+                "default_cursor_field": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "source_defined_primary_key": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    }
+                },
+                "namespace": {"type": "string"}
+            }
+        },
+
+        "ConfiguredCatalogMessage": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["streams"],
+            "properties": {
+                "streams": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/ConfiguredStream"}
+                }
+            }
+        },
+
+        "ConfiguredStream": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["stream", "sync_mode", "destination_sync_mode"],
+            "properties": {
+                "stream": {"$ref": "#/definitions/Stream"},
+                "sync_mode": {
+                    "$ref": "#/definitions/SyncMode",
+                    "default": "full_refresh"
+                },
+                "destination_sync_mode": {
+                    "$ref": "#/definitions/DestinationSyncMode",
+                    "default": "append"
+                }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {"sync_mode": {"const": "incremental"}}
+                    },
+                    "then": {
+                        "properties": {
+                            "cursor_field": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            }
+                        },
+                        "required": ["cursor_field"]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {"destination_sync_mode": {"enum": ["append_dedup", "upsert_dedup"]}}
+                    },
+                    "then": {
+                        "properties": {
+                            "primary_key": {
+                                "type": "array",
+                                "items": {
+                                    "type": "array",
+                                    "items": {"type": "string"}
+                                }
+                            }
+                        },
+                        "required": ["primary_key"]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {"sync_mode": {"const": "full_refresh"}}
+                    },
+                    "then": {
+                        "properties": {"destination_sync_mode": {"enum": ["overwrite", "append"]}}
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {"sync_mode": {"const": "incremental"}}
+                    },
+                    "then": {
+                        "properties": {"destination_sync_mode": {"enum": ["append", "append_dedup", "upsert_dedup"]}}
+                    }
+                }
+            ]
+        },
+
+        "SyncMode": {
+            "type": "string",
+            "enum": ["full_refresh", "incremental"]
+        },
+
+        "DestinationSyncMode": {
+            "type": "string",
+            "enum": ["append", "overwrite", "append_dedup", "upsert_dedup"]
+        }
+    }
+}
