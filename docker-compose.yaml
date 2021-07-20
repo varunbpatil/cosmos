@@ -1,6 +1,6 @@
 version: "3.7"
 x-golang-daemon: &golang-daemon
-  image: varunpatil/cosmos:0.1.0
+  image: varunpatil/cosmos:0.1.1
   depends_on:
     - postgresql
     - temporal
@@ -21,7 +21,8 @@ services:
     container_name: cosmos-postgresql
     environment:
       POSTGRES_PASSWORD: password
-    image: postgres:9.6
+    image: postgres:13
+    command: -c wal_level=logical -c max_replication_slots=1
     networks:
       - cosmos-network
     ports:
@@ -71,6 +72,24 @@ services:
     command: sh -c '/wait && /temporald'
     networks:
       - cosmos-network
+  supabase-realtime:
+    container_name: supabase-realtime-server
+    image: supabase/realtime
+    environment:
+      - DB_HOST=postgresql
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_PORT=5432
+      - SECURE_CHANNELS=false
+      - PORT=4000
+    depends_on:
+      - cosmos
+      - postgresql
+    networks:
+      - cosmos-network
+    ports:
+      - 4000:4000
 networks:
   cosmos-network:
 volumes:

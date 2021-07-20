@@ -78,6 +78,11 @@ func (db *DB) migrate() error {
 		return nil
 	}
 
+	// Create a publication for the supabase realtime server.
+	if _, err := db.db.Exec(context.Background(), `CREATE PUBLICATION supabase_realtime FOR ALL TABLES;`); err != nil {
+		return fmt.Errorf("failed to create publication for supabase realtime: %w", err)
+	}
+
 	// Create the 'migrations' table if it doesn't already exist.
 	if _, err := db.db.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY);`); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)

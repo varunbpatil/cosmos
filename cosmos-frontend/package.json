@@ -8,6 +8,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@supabase/realtime-js": "^1.1.1",
     "ansispan": "0.0.4",
     "axios": "^0.21.1",
     "colors": "^1.4.0",

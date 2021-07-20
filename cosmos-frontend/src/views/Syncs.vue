@@ -90,6 +90,7 @@
 <script>
 import CreateSync from '@/components/CreateSync'
 import EditSync from '@/components/EditSync'
+const { RealtimeClient } = require('@supabase/realtime-js');
 
 export default {
   components: {
@@ -104,6 +105,8 @@ export default {
       snackbarToggle: false,
       snackbarText: null,
       intervalID: null,
+      client: null,
+      realtimeURL: process.env.VUE_APP_SUPABASE_REALTIME_URL,
     }
   },
 
@@ -201,15 +204,30 @@ export default {
     // First time sync fetch.
     this.fetchSyncs()
 
-    // Subsequent endpoint fetches are done by setInterval.
+    // Supabase realtime updates.
+    // TODO: Ideally, we would have liked to determine the row that changed from the
+    // payload and only fetch that particular row.
+    this.client = new RealtimeClient(this.realtimeURL)
+    this.client.connect()
+    var allSyncsChanges = this.client.channel(`realtime:public:syncs`)
+    allSyncsChanges.on("*", () => this.fetchSyncs())
+    allSyncsChanges.subscribe()
+
+    // Do a complete fetch every 30 seconds.
+    // This is only as a backup if Supabase realtime fails for some reason.
     var v = this // Cannot access "this" directly inside setInterval.
     this.intervalID = setInterval(function() {
       v.fetchSyncs()
-    }, 3000)
+    }, 30000)
   },
 
   beforeDestroy() {
-    clearInterval(this.intervalID)
+    if (this.intervalID) {
+      clearInterval(this.intervalID)
+    }
+    if (this.client) {
+      this.client.disconnect()
+    }
   }
 }
 </script>

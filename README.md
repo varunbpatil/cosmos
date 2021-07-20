@@ -20,6 +20,8 @@ Along the way, I added a few nice touches to the UI.
 
 **Workflow orchestration**: [Temporal](https://temporal.io/)
 
+**Realtime UI updates**: [Supabase Realtime](https://github.com/supabase/realtime) (websockets)
+
 ## Concepts
 
 | Name       | Description                                                                                                                                                                                                                                                        |
@@ -56,7 +58,7 @@ search in all dropdown boxes.
 
 ![Connectors Edit](images/endpoints_create.png)
 
-The page should be automatically updated in a few seconds after the *endpoint* is created.
+The page should be automatically updated immediately after the *endpoint* is created.
 
 ![Connectors Edit](images/endpoints.png)
 
@@ -64,9 +66,9 @@ The next step is to connect a source and destination *endpoint* pair with a *Syn
 
 ![Connectors Edit](images/syncs_create.png)
 
-The page should automatically update in a few seconds after the *Sync* is
-created. You can click on the **Enable Sync** toggle button to enable the sync
-to run on a schedule or click the **Sync Now** button to start an ad-hoc sync.
+The page should automatically update immediately after the *Sync* is created. You can
+click on the **Enable Sync** toggle button to enable the sync to run on a schedule or
+click the **Sync Now** button to start an ad-hoc sync.
 
 ![Connectors Edit](images/syncs.png)
 
