@@ -205,13 +205,21 @@ export default {
     this.fetchSyncs()
 
     // Supabase realtime updates.
+    // 1. For syncs, we must subscribe to endpoint and run changes as well.
+    //
     // TODO: Ideally, we would have liked to determine the row that changed from the
-    // payload and only fetch that particular row.
+    //       payload and only fetch that particular row.
     this.client = new RealtimeClient(this.realtimeURL)
     this.client.connect()
-    var allSyncsChanges = this.client.channel(`realtime:public:syncs`)
-    allSyncsChanges.on("*", () => this.fetchSyncs())
-    allSyncsChanges.subscribe()
+    var endpointsChanges = this.client.channel(`realtime:public:endpoints`)
+    endpointsChanges.on("*", () => this.fetchSyncs())
+    endpointsChanges.subscribe()
+    var runsChanges = this.client.channel(`realtime:public:runs`)
+    runsChanges.on("*", () => this.fetchSyncs())
+    runsChanges.subscribe()
+    var syncsChanges = this.client.channel(`realtime:public:syncs`)
+    syncsChanges.on("*", () => this.fetchSyncs())
+    syncsChanges.subscribe()
 
     // Do a complete fetch every 30 seconds.
     // This is only as a backup if Supabase realtime fails for some reason.

@@ -1,6 +1,6 @@
 version: "3.7"
 x-golang-daemon: &golang-daemon
-  image: varunpatil/cosmos:0.1.2
+  image: varunpatil/cosmos:0.1.3
   depends_on:
     - postgresql
     - temporal

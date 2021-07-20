@@ -164,15 +164,19 @@ export default {
     this.fetchEndpointsByType(this.endpointType)
 
     // Supabase realtime updates.
-    // Specifying the channel as `realtime:public:endpoints:type=eq.${this.endpointType}`
-    // will not work for delete's.
+    // 1. Specifying the channel as `realtime:public:endpoints:type=eq.${this.endpointType}` will not work for delete's.
+    // 2. For endpoints, we must subscribe to connector changes as well.
+    //
     // TODO: Ideally, we would have liked to determine the row that changed from the
-    // payload and only fetch that particular row.
+    //       payload and only fetch that particular row.
     this.client = new RealtimeClient(this.realtimeURL)
     this.client.connect()
-    var allEndpointsChanges = this.client.channel(`realtime:public:endpoints`)
-    allEndpointsChanges.on("*", () => this.fetchEndpointsByType(this.endpointType))
-    allEndpointsChanges.subscribe()
+    var connectorsChanges = this.client.channel(`realtime:public:connectors`)
+    connectorsChanges.on("*", () => this.fetchEndpointsByType(this.endpointType))
+    connectorsChanges.subscribe()
+    var endpointsChanges = this.client.channel(`realtime:public:endpoints`)
+    endpointsChanges.on("*", () => this.fetchEndpointsByType(this.endpointType))
+    endpointsChanges.subscribe()
 
     // Do a complete fetch every 30 seconds.
     // This is only as a backup if Supabase realtime fails for some reason.

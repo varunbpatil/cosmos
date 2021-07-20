@@ -269,12 +269,12 @@ export default {
 
     // Supabase realtime updates.
     // TODO: Ideally, we would have liked to determine the row that changed from the
-    // payload and only fetch that particular row.
+    //       payload and only fetch that particular row.
     this.client = new RealtimeClient(this.realtimeURL)
     this.client.connect()
-    var allRunsChanges = this.client.channel(`realtime:public:runs`)
-    allRunsChanges.on("*", () => this.fetchRuns())
-    allRunsChanges.subscribe()
+    var runsChanges = this.client.channel(`realtime:public:runs`)
+    runsChanges.on("*", () => this.fetchRuns())
+    runsChanges.subscribe()
 
     // Do a complete fetch every 30 seconds.
     // This is only as a backup if Supabase realtime fails for some reason.
