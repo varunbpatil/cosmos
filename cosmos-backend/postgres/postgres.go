@@ -78,7 +78,12 @@ func (db *DB) migrate() error {
 		return nil
 	}
 
-	// Create a publication for the supabase realtime server.
+	// Create a publication for the supabase realtime server. There is no "IF NOT
+	// EXISTS" clause available during create, so drop existing publication before
+	// creating a new one.
+	if _, err := db.db.Exec(context.Background(), `DROP PUBLICATION IF EXISTS supabase_realtime;`); err != nil {
+		return fmt.Errorf("failed to drop publication for supabase realtime: %w", err)
+	}
 	if _, err := db.db.Exec(context.Background(), `CREATE PUBLICATION supabase_realtime FOR ALL TABLES;`); err != nil {
 		return fmt.Errorf("failed to create publication for supabase realtime: %w", err)
 	}
