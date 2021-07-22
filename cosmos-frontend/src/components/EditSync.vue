@@ -80,6 +80,17 @@
             class="pt-3"
           ></v-text-field>
 
+          <!--Basic Normalization-->
+          <v-switch
+            v-if="supportsNormalization(localSync.destinationEndpointID)"
+            v-model="localSync.basicNormalization"
+            label="Basic Normalization"
+            inset
+            hide-details
+            class="pt-3"
+            color="indigo"
+          ></v-switch>
+
           <div v-if="form">
             <v-row v-for="(f, idx) in form.catalog" :key="idx" no-gutters class="mt-12">
               <v-col cols="12" md="5">
@@ -310,10 +321,17 @@ export default {
       let _sync = _.cloneDeep(this.localSync)
       _sync.config = _.cloneDeep(this.form)
 
+      // The reason I have to cherrypick fields to update is because there are
+      // some fields in Sync which are only updated internally (ex: state).
       this.$axios
         .patch(
           `/api/v1/syncs/${_sync.id}`,
-          {name: _sync.name, config: _sync.config, scheduleInterval: _sync.scheduleInterval}
+          {
+            name: _sync.name,
+            config: _sync.config,
+            scheduleInterval: _sync.scheduleInterval,
+            basicNormalization: _sync.basicNormalization,
+          }
         )
         .then(() => {
           // Close the dialog.
@@ -443,6 +461,14 @@ export default {
 
     clear(idx) {
       this.clearOptions[idx].handler()
+    },
+
+    supportsNormalization(destEndpointID) {
+      if (!destEndpointID || this.destinationEndpoints.length == 0) {
+        return false
+      }
+      let index = this.destinationEndpoints.findIndex(obj => obj.id == destEndpointID)
+      return this.destinationEndpoints[index].connector.spec.spec.supportsNormalization
     }
   }
 }

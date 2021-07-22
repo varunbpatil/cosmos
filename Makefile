@@ -2,7 +2,7 @@ build:
 	@echo "Building cosmos-frontend..."
 	cd cosmos-frontend && npm run build
 	@echo "Building docker image..."
-	docker build --no-cache -t varunpatil/cosmos:0.1.4 .
+	docker build --no-cache -t varunpatil/cosmos:0.1.5 .
 
 clean:
 	rm -rf cosmos-frontend/dist

@@ -46,8 +46,7 @@
                         v-model="s.enabled"
                         @change="toggleSync(s.id, ...arguments)"
                         @click.stop.prevent
-                      >
-                      </v-switch>
+                      ></v-switch>
                     </div>
                   </template>
                   <span class="font-weight-medium">{{ s.enabled ? "Disable" : "Enable" }} Sync</span>

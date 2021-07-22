@@ -12,6 +12,7 @@ type Sync struct {
 	DestinationEndpointID int                    `json:"destinationEndpointID"`
 	ScheduleInterval      int                    `json:"scheduleInterval"`
 	Enabled               bool                   `json:"enabled"`
+	BasicNormalization    bool                   `json:"basicNormalization"`
 	State                 map[string]interface{} `json:"state"`
 	Config                Form                   `json:"config"`
 	ConfiguredCatalog     Message                `json:"configuredCatalog"`
@@ -37,11 +38,12 @@ func (s *Sync) Validate() error {
 }
 
 type SyncUpdate struct {
-	Name             *string                 `json:"name"`
-	Config           *Form                   `json:"config"`
-	ScheduleInterval *int                    `json:"scheduleInterval"`
-	Enabled          *bool                   `json:"enabled"`
-	State            *map[string]interface{} `json:"state"`
+	Name               *string                 `json:"name"`
+	Config             *Form                   `json:"config"`
+	ScheduleInterval   *int                    `json:"scheduleInterval"`
+	Enabled            *bool                   `json:"enabled"`
+	BasicNormalization *bool                   `json:"basicNormalization"`
+	State              *map[string]interface{} `json:"state"`
 }
 
 type SyncFilter struct {
@@ -97,6 +99,9 @@ func (a *App) UpdateSync(ctx context.Context, id int, upd *SyncUpdate) (*Sync, e
 	}
 	if v := upd.Enabled; v != nil {
 		sync.Enabled = *v
+	}
+	if v := upd.BasicNormalization; v != nil {
+		sync.BasicNormalization = *v
 	}
 	if v := upd.Config; v != nil {
 		sync.Config = *v

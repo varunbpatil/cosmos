@@ -100,6 +100,7 @@ func findSyncs(ctx context.Context, tx *Tx, filter cosmos.SyncFilter) ([]*cosmos
 			destination_endpoint_id,
 			schedule_interval,
 			enabled,
+			basic_normalization,
 			state,
 			config,
 			configured_catalog,
@@ -130,6 +131,7 @@ func findSyncs(ctx context.Context, tx *Tx, filter cosmos.SyncFilter) ([]*cosmos
 			&sync.DestinationEndpointID,
 			&sync.ScheduleInterval,
 			&sync.Enabled,
+			&sync.BasicNormalization,
 			(*Map)(&sync.State),
 			(*Form)(&sync.Config),
 			(*Message)(&sync.ConfiguredCatalog),
@@ -179,13 +181,14 @@ func createSync(ctx context.Context, tx *Tx, sync *cosmos.Sync) error {
 			destination_endpoint_id,
 			schedule_interval,
 			enabled,
+			basic_normalization,
 			state,
 			config,
 			configured_catalog,
 			created_at,
 			updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id
 	`,
 		sync.Name,
@@ -193,6 +196,7 @@ func createSync(ctx context.Context, tx *Tx, sync *cosmos.Sync) error {
 		sync.DestinationEndpointID,
 		sync.ScheduleInterval,
 		sync.Enabled,
+		sync.BasicNormalization,
 		(*Map)(&sync.State),
 		(*Form)(&sync.Config),
 		(*Message)(&sync.ConfiguredCatalog),
@@ -219,18 +223,20 @@ func updateSync(ctx context.Context, tx *Tx, id int, sync *cosmos.Sync) error {
 			destination_endpoint_id = $3,
 			schedule_interval = $4,
 			enabled = $5,
-			state = $6,
-			config = $7,
-			configured_catalog = $8,
-			updated_at = $9
+			basic_normalization = $6,
+			state = $7,
+			config = $8,
+			configured_catalog = $9,
+			updated_at = $10
 		WHERE
-			id = $10
+			id = $11
 	`,
 		sync.Name,
 		sync.SourceEndpointID,
 		sync.DestinationEndpointID,
 		sync.ScheduleInterval,
 		sync.Enabled,
+		sync.BasicNormalization,
 		(*Map)(&sync.State),
 		(*Form)(&sync.Config),
 		(*Message)(&sync.ConfiguredCatalog),

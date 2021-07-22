@@ -273,13 +273,13 @@ func (w *Workflow) NormalizationActivity(ctx context.Context, run *cosmos.Run) (
 	}
 
 	dstConnector := run.Sync.DestinationEndpoint.Connector
-	dstConfig := run.Sync.DestinationEndpoint.Config.ToSpec()
+	basicNormalization := run.Sync.BasicNormalization
 
 	runctx, cancel := context.WithCancel(ctx)
 	runctx = cosmos.NewArtifactoryContext(runctx, artifactory)
 	defer cancel()
 
-	s1out, s1errc := w.App.Normalize(runctx, dstConnector, dstConfig)
+	s1out, s1errc := w.App.Normalize(runctx, dstConnector, basicNormalization)
 	s2errc := w.ProcessNormalizationOutput(runctx, s1out, attempt)
 
 	cancel()

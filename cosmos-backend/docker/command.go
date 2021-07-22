@@ -187,7 +187,7 @@ func (s *CommandService) Write(ctx context.Context, connector *cosmos.Connector,
 	return out, errc
 }
 
-func (s *CommandService) Normalize(ctx context.Context, connector *cosmos.Connector, config map[string]interface{}) (<-chan interface{}, <-chan error) {
+func (s *CommandService) Normalize(ctx context.Context, connector *cosmos.Connector, basicNormalization bool) (<-chan interface{}, <-chan error) {
 	out := make(chan interface{}, 100)
 	errc := make(chan error, 1)
 
@@ -196,13 +196,7 @@ func (s *CommandService) Normalize(ctx context.Context, connector *cosmos.Connec
 		defer close(out)
 
 		// check whether normalization has to be performed.
-		skipNormalization := true
-		if v, ok := config["basic_normalization"]; ok {
-			if normalize, ok := v.(bool); ok && normalize {
-				skipNormalization = false
-			}
-		}
-		if skipNormalization {
+		if !basicNormalization {
 			s.sendOutput(ctx, out, "Normalization is not available or is disabled. Skipping.")
 			errc <- nil
 			return

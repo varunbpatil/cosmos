@@ -72,6 +72,17 @@
           class="pt-3"
         ></v-text-field>
 
+        <!--Basic Normalization-->
+        <v-switch
+          v-if="supportsNormalization(sync.destinationEndpointID)"
+          v-model="sync.basicNormalization"
+          label="Basic Normalization"
+          inset
+          hide-details
+          class="pt-3"
+          color="indigo"
+        ></v-switch>
+
         <div v-if="form">
           <v-row v-for="(f, idx) in form.catalog" :key="idx" no-gutters class="mt-12">
             <v-col cols="12" md="5">
@@ -152,6 +163,7 @@ export default {
         sourceEndpointID: null, // the v-autocomplete component sets this to the appropriate value (see 'item-value' prop)
         destinationEndpointID: null, // the v-autocomplete component sets this to the appropriate value (see 'item-value' prop)
         scheduleInterval: null,
+        basicNormalization: false,
         config: null,
       },
       endpoints: [], // this has to be a non-null value for v-autocomplete to be rendered correctly.
@@ -177,13 +189,13 @@ export default {
   watch: {
 
     // Clear form fields everytime the dialog opens.
-    // Also, fetch all the connectors for the given endpointType.
     dialog: function(val) {
       if (val) {
         this.sync.name = ""
         this.sync.sourceEndpointID = null
         this.sync.destinationEndpointID = null
         this.sync.scheduleInterval = null
+        this.sync.basicNormalization = false
         this.sync.config = null
         this.endpoints = [] // this has to be an empty array, otherwise v-autocomplete will throw errors.
         this.form = null
@@ -217,6 +229,7 @@ export default {
         // Whenever the destination endpoint v-autocomplete field is "cleared", reset the form.
         this.form = null
         this.error = null
+        this.sync.basicNormalization = false
       }
     },
 
@@ -265,6 +278,14 @@ export default {
         .finally(() => {
           this.loading = false
         })
+    },
+
+    supportsNormalization(destEndpointID) {
+      if (!destEndpointID || this.destinationEndpoints.length == 0) {
+        return false
+      }
+      let index = this.destinationEndpoints.findIndex(obj => obj.id == destEndpointID)
+      return this.destinationEndpoints[index].connector.spec.spec.supportsNormalization
     }
   }
 }
