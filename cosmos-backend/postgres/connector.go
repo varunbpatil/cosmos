@@ -109,7 +109,7 @@ func findConnectors(ctx context.Context, tx *Tx, filter cosmos.ConnectorFilter) 
 			COUNT(*) OVER()
 		FROM connectors
 		WHERE `+strings.Join(where, " AND ")+`
-		ORDER BY id ASC
+		ORDER BY name ASC
 		`+FormatLimitOffset(filter.Limit, filter.Offset),
 		args...,
 	)

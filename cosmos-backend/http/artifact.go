@@ -43,5 +43,5 @@ func (s *Server) getArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, string(data))
+	fmt.Fprint(w, string(data))
 }

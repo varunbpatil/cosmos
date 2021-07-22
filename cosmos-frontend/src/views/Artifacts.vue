@@ -93,11 +93,11 @@ export default {
     // First time artifact fetch.
     this.fetchArtifact(null)
 
-    // Subsequent artifact fetches are done by setInterval.
-    var v = this // Cannot access "this" directly inside setInterval.
+    // Do a complete refresh every 5000ms.
+    var v = this // Cannot access "this" inside setInterval.
     this.intervalID = setInterval(function() {
       v.fetchArtifact(null)
-    }, 3000)
+    }, 5000)
   },
 
   beforeDestroy() {

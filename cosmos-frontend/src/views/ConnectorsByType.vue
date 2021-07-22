@@ -46,7 +46,7 @@
 <script>
 import EditConnector from '@/components/EditConnector'
 import CreateConnector from '@/components/CreateConnector'
-const { RealtimeClient } = require('@supabase/realtime-js');
+const _ = require('lodash')
 
 export default {
   components: {
@@ -61,8 +61,6 @@ export default {
       snackbarToggle: false,
       snackbarText: null,
       intervalID: null,
-      client: null,
-      realtimeURL: process.env.VUE_APP_SUPABASE_REALTIME_URL,
     }
   },
 
@@ -108,35 +106,24 @@ export default {
       this.$router.push("/connectors")
     }
 
+    // Create a throttled version of the fetchConnectorsByType function
+    // which executes at most once every 1000ms.
+    let fn = _.throttle(this.fetchConnectorsByType, 1000)
+
     // First time connector fetch.
-    this.fetchConnectorsByType(this.connectorType)
+    fn(this.connectorType)
 
     // Supabase realtime updates.
-    // 1. Specifying the channel as `realtime:public:connectors:type=eq.${this.connectorType}` will not work for delete's.
-    //
-    // TODO: Ideally, we would have liked to determine the row that changed from the
-    //       payload and only fetch that particular row.
-    this.client = new RealtimeClient(this.realtimeURL)
-    this.client.connect()
-    var connectorsChanges = this.client.channel(`realtime:public:connectors`)
-    connectorsChanges.on("*", () => this.fetchConnectorsByType(this.connectorType))
-    connectorsChanges.subscribe()
+    this.$connectorChanges.on("*", () => fn(this.connectorType))
 
-    // Do a complete fetch every 30 seconds.
-    // This is only as a backup if Supabase realtime fails for some reason.
-    var v = this // Cannot access "this" directly inside setInterval.
-    this.intervalID = setInterval(function() {
-      v.fetchConnectorsByType(v.connectorType)
-    }, 30000)
+    // Do a complete refresh every 5000ms.
+    var v = this // Cannot access "this" inside setInterval.
+    this.intervalID = setInterval(function() { fn(v.connectorType) }, 5000)
   },
 
   beforeDestroy() {
-    if (this.intervalID) {
-      clearInterval(this.intervalID)
-    }
-    if (this.client) {
-      this.client.disconnect()
-    }
+    clearInterval(this.intervalID)
+    this.$connectorChanges.off("*")
   }
 }
 </script>

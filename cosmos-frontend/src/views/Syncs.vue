@@ -90,7 +90,7 @@
 <script>
 import CreateSync from '@/components/CreateSync'
 import EditSync from '@/components/EditSync'
-const { RealtimeClient } = require('@supabase/realtime-js');
+const _ = require('lodash')
 
 export default {
   components: {
@@ -105,16 +105,18 @@ export default {
       snackbarToggle: false,
       snackbarText: null,
       intervalID: null,
-      client: null,
-      realtimeURL: process.env.VUE_APP_SUPABASE_REALTIME_URL,
     }
   },
 
   watch: {
-    '$route.name': function() {
-      this.syncs = null
-      this.totalSyncs = null
-      this.fetchSyncs()
+    '$route.name': function(val) {
+      if (val !== "Syncs") {
+        // User has clicked on a particular sync. Filter out all others.
+        this.syncs = this.syncs.filter(obj => obj.id == this.$route.params.syncID)
+        this.totalSyncs = 1
+      } else {
+        this.fetchSyncs()
+      }
     }
   },
 
@@ -201,41 +203,30 @@ export default {
   },
 
   mounted() {
+    // Create a throttled version of the fetchSyncs function
+    // which executes at most once every 1000ms.
+    let fn = _.throttle(this.fetchSyncs, 1000)
+
     // First time sync fetch.
-    this.fetchSyncs()
+    fn()
 
     // Supabase realtime updates.
-    // 1. For syncs, we must subscribe to endpoint and run changes as well.
-    //
-    // TODO: Ideally, we would have liked to determine the row that changed from the
-    //       payload and only fetch that particular row.
-    this.client = new RealtimeClient(this.realtimeURL)
-    this.client.connect()
-    var endpointsChanges = this.client.channel(`realtime:public:endpoints`)
-    endpointsChanges.on("*", () => this.fetchSyncs())
-    endpointsChanges.subscribe()
-    var runsChanges = this.client.channel(`realtime:public:runs`)
-    runsChanges.on("*", () => this.fetchSyncs())
-    runsChanges.subscribe()
-    var syncsChanges = this.client.channel(`realtime:public:syncs`)
-    syncsChanges.on("*", () => this.fetchSyncs())
-    syncsChanges.subscribe()
+    this.$endpointChanges.on("*", () => fn())
+    this.$runChanges.on("*", () => fn())
+    this.$syncChanges.on("*", () => fn())
 
-    // Do a complete fetch every 30 seconds.
-    // This is only as a backup if Supabase realtime fails for some reason.
-    var v = this // Cannot access "this" directly inside setInterval.
-    this.intervalID = setInterval(function() {
-      v.fetchSyncs()
-    }, 30000)
+    // Do a complete refresh every 5000ms.
+    this.intervalID = setInterval(function() { fn() }, 5000)
   },
 
   beforeDestroy() {
-    if (this.intervalID) {
-      clearInterval(this.intervalID)
-    }
-    if (this.client) {
-      this.client.disconnect()
-    }
+    clearInterval(this.intervalID)
+    // This is the opposite of what this.$*Changes.on() would do.
+    // There is an off() method, but that removes all callbacks associated with "*".
+    // With nested views like the Syncs page, we only want to remove the callbacks we added.
+    this.$endpointChanges.bindings.pop()
+    this.$runChanges.bindings.pop()
+    this.$syncChanges.bindings.pop()
   }
 }
 </script>

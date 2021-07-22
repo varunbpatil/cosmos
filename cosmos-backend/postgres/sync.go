@@ -108,7 +108,7 @@ func findSyncs(ctx context.Context, tx *Tx, filter cosmos.SyncFilter) ([]*cosmos
 			COUNT(*) OVER()
 		FROM syncs
 		WHERE `+strings.Join(where, " AND ")+`
-		ORDER BY id ASC
+		ORDER BY name ASC
 		`+FormatLimitOffset(filter.Limit, filter.Offset),
 		args...,
 	)

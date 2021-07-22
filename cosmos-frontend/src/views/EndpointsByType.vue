@@ -70,7 +70,7 @@
 <script>
 import EditEndpoint from '@/components/EditEndpoint'
 import CreateEndpoint from '@/components/CreateEndpoint'
-const { RealtimeClient } = require('@supabase/realtime-js');
+const _ = require('lodash')
 
 export default {
   components: {
@@ -85,8 +85,6 @@ export default {
       snackbarToggle: false,
       snackbarText: null,
       intervalID: null,
-      client: null,
-      realtimeURL: process.env.VUE_APP_SUPABASE_REALTIME_URL,
     }
   },
 
@@ -160,39 +158,26 @@ export default {
       this.$router.push("/endpoints")
     }
 
+    // Create a throttled version of the fetchEndpointsByType function
+    // which executes at most once every 1000ms.
+    let fn = _.throttle(this.fetchEndpointsByType, 1000)
+
     // First time endpoint fetch.
-    this.fetchEndpointsByType(this.endpointType)
+    fn(this.endpointType)
 
     // Supabase realtime updates.
-    // 1. Specifying the channel as `realtime:public:endpoints:type=eq.${this.endpointType}` will not work for delete's.
-    // 2. For endpoints, we must subscribe to connector changes as well.
-    //
-    // TODO: Ideally, we would have liked to determine the row that changed from the
-    //       payload and only fetch that particular row.
-    this.client = new RealtimeClient(this.realtimeURL)
-    this.client.connect()
-    var connectorsChanges = this.client.channel(`realtime:public:connectors`)
-    connectorsChanges.on("*", () => this.fetchEndpointsByType(this.endpointType))
-    connectorsChanges.subscribe()
-    var endpointsChanges = this.client.channel(`realtime:public:endpoints`)
-    endpointsChanges.on("*", () => this.fetchEndpointsByType(this.endpointType))
-    endpointsChanges.subscribe()
+    this.$connectorChanges.on("*", () => fn(this.endpointType))
+    this.$endpointChanges.on("*", () => fn(this.endpointType))
 
-    // Do a complete fetch every 30 seconds.
-    // This is only as a backup if Supabase realtime fails for some reason.
-    var v = this // Cannot access "this" directly inside setInterval.
-    this.intervalID = setInterval(function() {
-      v.fetchEndpointsByType(v.endpointType)
-    }, 30000)
+    // Do a complete refresh every 5000ms.
+    var v = this // Cannot access "this" inside setInterval.
+    this.intervalID = setInterval(function() { fn(v.endpointType) }, 5000)
   },
 
   beforeDestroy() {
-    if (this.intervalID) {
-      clearInterval(this.intervalID)
-    }
-    if (this.client) {
-      this.client.disconnect()
-    }
+    clearInterval(this.intervalID)
+    this.$connectorChanges.off("*")
+    this.$endpointChanges.off("*")
   }
 }
 </script>

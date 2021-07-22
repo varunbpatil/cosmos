@@ -1,6 +1,6 @@
 version: "3.7"
 x-golang-daemon: &golang-daemon
-  image: varunpatil/cosmos:0.1.3
+  image: varunpatil/cosmos:0.1.4
   depends_on:
     - postgresql
     - temporal
@@ -16,6 +16,7 @@ x-golang-daemon: &golang-daemon
     - ${ARTIFACT_DIR}:/tmp/cosmos/artifacts
     - ${SCRATCH_SPACE}:/tmp/cosmos/scratch
     - ${LOCAL_DIR}:/tmp/cosmos/local
+  restart: unless-stopped
 services:
   postgresql:
     container_name: cosmos-postgresql
@@ -29,6 +30,7 @@ services:
       - 5432:5432
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
   temporal:
     container_name: cosmos-temporal
     depends_on:
@@ -46,6 +48,7 @@ services:
       - cosmos-network
     ports:
       - 7233:7233
+    restart: unless-stopped
   temporal-web:
     container_name: cosmos-temporal-web
     depends_on:
@@ -58,6 +61,7 @@ services:
       - cosmos-network
     ports:
       - 8088:8088
+    restart: unless-stopped
   cosmos:
     container_name: cosmos
     <<: *golang-daemon
@@ -90,6 +94,7 @@ services:
       - cosmos-network
     ports:
       - 4000:4000
+    restart: unless-stopped
 networks:
   cosmos-network:
 volumes:

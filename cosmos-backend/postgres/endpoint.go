@@ -110,7 +110,7 @@ func findEndpoints(ctx context.Context, tx *Tx, filter cosmos.EndpointFilter) ([
 			COUNT(*) OVER()
 		FROM endpoints
 		WHERE `+strings.Join(where, " AND ")+`
-		ORDER BY id ASC
+		ORDER BY name ASC
 		`+FormatLimitOffset(filter.Limit, filter.Offset),
 		args...,
 	)

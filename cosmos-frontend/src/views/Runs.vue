@@ -112,8 +112,8 @@
 </template>
 
 <script>
-import { format } from 'date-fns';
-const { RealtimeClient } = require('@supabase/realtime-js');
+import { format } from 'date-fns'
+const _ = require('lodash')
 
 export default {
   components: {
@@ -132,8 +132,6 @@ export default {
       snackbarToggle: false,
       snackbarText: null,
       temporalWeb: process.env.VUE_APP_TEMPORAL_WEB,
-      client: null,
-      realtimeURL: process.env.VUE_APP_SUPABASE_REALTIME_URL,
     }
   },
 
@@ -151,10 +149,14 @@ export default {
   },
 
   watch: {
-    '$route.name': function() {
-      this.runs = null
-      this.totalRuns = null
-      this.fetchRuns()
+    '$route.name': function(val) {
+      if (val !== "Runs") {
+        // User has clicked on a particular run. Filter out all others.
+        this.runs = this.runs.filter(obj => obj.id == this.$route.params.runID)
+        this.totalRuns = 1
+      } else {
+        this.fetchRuns()
+      }
     },
 
     page: function() {
@@ -264,33 +266,26 @@ export default {
   },
 
   mounted() {
+    // Create a throttled version of the fetchRuns function
+    // which executes at most once every 1000ms.
+    let fn = _.throttle(this.fetchRuns, 1000)
+
     // First time run fetch.
-    this.fetchRuns()
+    fn()
 
     // Supabase realtime updates.
-    // TODO: Ideally, we would have liked to determine the row that changed from the
-    //       payload and only fetch that particular row.
-    this.client = new RealtimeClient(this.realtimeURL)
-    this.client.connect()
-    var runsChanges = this.client.channel(`realtime:public:runs`)
-    runsChanges.on("*", () => this.fetchRuns())
-    runsChanges.subscribe()
+    this.$runChanges.on("*", () => fn())
 
-    // Do a complete fetch every 30 seconds.
-    // This is only as a backup if Supabase realtime fails for some reason.
-    var v = this // Cannot access "this" directly inside setInterval.
-    this.intervalID = setInterval(function() {
-      v.fetchRuns()
-    }, 30000)
+    // Do a complete refresh every 5000ms.
+    this.intervalID = setInterval(function() { fn() }, 5000)
   },
 
   beforeDestroy() {
-    if (this.intervalID) {
-      clearInterval(this.intervalID)
-    }
-    if (this.client) {
-      this.client.disconnect()
-    }
+    clearInterval(this.intervalID)
+    // This is the opposite of what this.$*Changes.on() would do.
+    // There is an off() method, but that removes all callbacks associated with "*".
+    // With nested views like the Syncs page, we only want to remove the callbacks we added.
+    this.$runChanges.bindings.pop()
   }
 }
 </script>
