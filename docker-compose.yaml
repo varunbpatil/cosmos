@@ -1,6 +1,6 @@
 version: "3.7"
 x-golang-daemon: &golang-daemon
-  image: varunpatil/cosmos:0.1.5
+  image: varunpatil/cosmos:0.1.6
   depends_on:
     - postgresql
     - temporal
@@ -42,25 +42,11 @@ services:
       - POSTGRES_PWD=password
       - POSTGRES_SEEDS=postgresql
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
-    image: varunpatil/temporal-auto-setup:1.10.5
-    command: autosetup
+    image: temporalio/auto-setup:1.10.5
     networks:
       - cosmos-network
     ports:
       - 7233:7233
-    restart: unless-stopped
-  temporal-web:
-    container_name: cosmos-temporal-web
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
-      - TEMPORAL_PERMIT_WRITE_API=true
-    image: temporalio/web:1.10.0
-    networks:
-      - cosmos-network
-    ports:
-      - 8088:8088
     restart: unless-stopped
   cosmos:
     container_name: cosmos

@@ -21,7 +21,8 @@ const (
 	ArtifactWorker
 	ArtifactSrcConfig
 	ArtifactDstConfig
-	ArtifactCatalog
+	ArtifactSrcCatalog
+	ArtifactDstCatalog
 	ArtifactBeforeState
 	ArtifactAfterState
 	ArtifactMax
@@ -34,7 +35,8 @@ var ArtifactNames = [ArtifactMax]string{
 	"worker",
 	"source-config",
 	"destination-config",
-	"catalog",
+	"source-catalog",
+	"destination-catalog",
 	"before-state",
 	"after-state",
 }

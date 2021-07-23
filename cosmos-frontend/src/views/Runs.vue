@@ -66,14 +66,7 @@
           </v-col>
           <v-col cols="12" sm="6" md="2" class="py-1">
             <div class="font-weight-medium indigo--text">Status</div>
-            <a
-              :href="`${temporalWeb}/namespaces/default/workflows/${r.temporalWorkflowID}/${r.temporalRunID}/summary`"
-              target="_blank"
-              @click.stop
-              class="grey--text text--darken-2"
-            >
-              <div class="text-subtitle-1">{{ r.status }}</div>
-            </a>
+            <div class="text-subtitle-1">{{ r.status }}</div>
           </v-col>
           <v-col cols="12" sm="6" md="2" class="py-1">
             <div class="font-weight-medium indigo--text">Records</div>
@@ -131,7 +124,6 @@ export default {
       dateRange: [],
       snackbarToggle: false,
       snackbarText: null,
-      temporalWeb: process.env.VUE_APP_TEMPORAL_WEB,
     }
   },
 

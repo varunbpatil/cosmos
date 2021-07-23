@@ -78,7 +78,7 @@ func (s *CommandService) Read(ctx context.Context, connector *cosmos.Connector, 
 
 		artifactory := cosmos.ArtifactoryFromContext(ctx)
 		configFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactSrcConfig)
-		configuredCatalogFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactCatalog)
+		configuredCatalogFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactSrcCatalog)
 		stateFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactBeforeState)
 
 		dockerImage := connector.DockerImageName + ":" + connector.DockerImageTag
@@ -101,10 +101,21 @@ func (s *CommandService) Read(ctx context.Context, connector *cosmos.Connector, 
 			return
 		}
 
-		s.scanOutput(ctx, stdout, stderr, out)
+		// If the scan terminated prematurely with an error, kill the command.
+		// cmd.Wait() will get the killed error.
+		scanErr := s.scanOutput(ctx, stdout, stderr, out)
+		if scanErr != nil {
+			if err := cmd.Process.Kill(); err != nil {
+				panic(fmt.Sprintf("Unable to kill read command. err: %s", err))
+			}
+		}
 
 		if err := cmd.Wait(); err != nil {
-			errc <- fmt.Errorf("read command failed with err: %w", err)
+			if scanErr != nil {
+				errc <- fmt.Errorf("read command scanner failed with err: %w", scanErr)
+			} else {
+				errc <- fmt.Errorf("read command failed with err: %w", err)
+			}
 			return
 		}
 
@@ -126,7 +137,7 @@ func (s *CommandService) Write(ctx context.Context, connector *cosmos.Connector,
 
 		artifactory := cosmos.ArtifactoryFromContext(ctx)
 		configFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactDstConfig)
-		configuredCatalogFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactCatalog)
+		configuredCatalogFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactDstCatalog)
 
 		dockerImage := connector.DockerImageName + ":" + connector.DockerImageTag
 		cmdString := prepareDockerCmd("write", true, dockerImage, nil, configFile, configuredCatalogFile, nil)
@@ -173,11 +184,23 @@ func (s *CommandService) Write(ctx context.Context, connector *cosmos.Connector,
 			}
 		}()
 
-		s.scanOutput(ctx, stdout, stderr, out)
+		// If the scan terminated prematurely with an error, kill the command.
+		// cmd.Wait() will get the killed error.
+		scanErr := s.scanOutput(ctx, stdout, stderr, out)
+		if scanErr != nil {
+			if err := cmd.Process.Kill(); err != nil {
+				panic(fmt.Sprintf("Unable to kill write command. err: %s", err))
+			}
+		}
+
 		wg.Wait()
 
 		if err := cmd.Wait(); err != nil {
-			errc <- fmt.Errorf("write command failed. err: %w", err)
+			if scanErr != nil {
+				errc <- fmt.Errorf("write command scanner failed with err: %w", scanErr)
+			} else {
+				errc <- fmt.Errorf("write command failed with err: %w", err)
+			}
 			return
 		}
 
@@ -204,7 +227,7 @@ func (s *CommandService) Normalize(ctx context.Context, connector *cosmos.Connec
 
 		artifactory := cosmos.ArtifactoryFromContext(ctx)
 		configFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactDstConfig)
-		configuredCatalogFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactCatalog)
+		configuredCatalogFile := s.App.GetArtifactPath(artifactory, cosmos.ArtifactDstCatalog)
 
 		cmdString := prepareDockerCmd("run", false, NormalizationDockerImage, &connector.DestinationType, configFile, configuredCatalogFile, nil)
 		s.sendOutput(ctx, out, fmt.Sprintf("Docker command: docker %s", cmdString))
@@ -225,10 +248,21 @@ func (s *CommandService) Normalize(ctx context.Context, connector *cosmos.Connec
 			return
 		}
 
-		s.scanOutput(ctx, stdout, stderr, out)
+		// If the scan terminated prematurely with an error, kill the command.
+		// cmd.Wait() will get the killed error.
+		scanErr := s.scanOutput(ctx, stdout, stderr, out)
+		if scanErr != nil {
+			if err := cmd.Process.Kill(); err != nil {
+				panic(fmt.Sprintf("Unable to kill normalization command. err: %s", err))
+			}
+		}
 
 		if err := cmd.Wait(); err != nil {
-			errc <- fmt.Errorf("normalization command failed with err: %w", err)
+			if scanErr != nil {
+				errc <- fmt.Errorf("normalization command scanner failed with err: %w", scanErr)
+			} else {
+				errc <- fmt.Errorf("normalization command failed with err: %w", err)
+			}
 			return
 		}
 
@@ -291,9 +325,16 @@ func (s *CommandService) Runner(
 	return nil, fmt.Errorf("docker runner failed to find any %s messages", messageType)
 }
 
-func (s *CommandService) scanOutput(ctx context.Context, stdout io.ReadCloser, stderr io.ReadCloser, out chan<- interface{}) {
+func (s *CommandService) scanOutput(ctx context.Context, stdout io.ReadCloser, stderr io.ReadCloser, out chan<- interface{}) error {
 	merged := io.MultiReader(stdout, stderr)
 	scanner := bufio.NewScanner(merged)
+
+	// Scanner will error with lines longer than 65536 characters.
+	// So, create a 16 MB buffer and pass it to scanner.
+	// See https://stackoverflow.com/a/16615559
+	const maxCapacity = 16 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
 
 	for scanner.Scan() {
 		b := scanner.Bytes()
@@ -305,9 +346,11 @@ func (s *CommandService) scanOutput(ctx context.Context, stdout io.ReadCloser, s
 		select {
 		case out <- msg:
 		case <-ctx.Done():
-			return
+			return nil
 		}
 	}
+
+	return scanner.Err()
 }
 
 func (s *CommandService) sendOutput(ctx context.Context, out chan<- interface{}, i interface{}) {

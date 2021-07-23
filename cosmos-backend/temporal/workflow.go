@@ -153,7 +153,7 @@ func (w *Workflow) Initialize(ctx context.Context, run *cosmos.Run) (*cosmos.Run
 	state := run.Sync.State
 	srcConfig := run.Sync.SourceEndpoint.Config.ToSpec()
 	dstConfig := run.Sync.DestinationEndpoint.Config.ToSpec()
-	configuredCatalog := run.Sync.ConfiguredCatalog.ConfiguredCatalog
+	srcConfiguredCatalog := run.Sync.ConfiguredCatalog.ConfiguredCatalog
 
 	// In order to wipe the destination clean, we do a "full_refresh - overwrite" sync
 	// with the only difference being that no records are read from the source and
@@ -161,10 +161,18 @@ func (w *Workflow) Initialize(ctx context.Context, run *cosmos.Run) (*cosmos.Run
 	if run.Options.WipeDestination {
 		syncMode := cosmos.SyncModeFullRefresh
 		dstSyncMode := cosmos.DestinationSyncModeOverwrite
-		for i := range configuredCatalog.Streams {
-			configuredCatalog.Streams[i].SyncMode = &syncMode
-			configuredCatalog.Streams[i].DestinationSyncMode = &dstSyncMode
+		for i := range srcConfiguredCatalog.Streams {
+			srcConfiguredCatalog.Streams[i].SyncMode = &syncMode
+			srcConfiguredCatalog.Streams[i].DestinationSyncMode = &dstSyncMode
 		}
+	}
+
+	// Modify the streams in the destination configuredCatalog according to the
+	// namespace definition and stream prefix provided by the user.
+	dstConfiguredCatalog := &cosmos.ConfiguredCatalog{}
+	DeepCopy(srcConfiguredCatalog, dstConfiguredCatalog)
+	for i := range dstConfiguredCatalog.Streams {
+		run.Sync.NamespaceMapper(&dstConfiguredCatalog.Streams[i].Stream)
 	}
 
 	artifactory, err := w.App.GetArtifactory(run.SyncID, run.ExecutionDate)
@@ -183,7 +191,10 @@ func (w *Workflow) Initialize(ctx context.Context, run *cosmos.Run) (*cosmos.Run
 	if err := w.App.WriteArtifact(artifactory, cosmos.ArtifactDstConfig, dstConfig); err != nil {
 		return nil, err
 	}
-	if err := w.App.WriteArtifact(artifactory, cosmos.ArtifactCatalog, configuredCatalog); err != nil {
+	if err := w.App.WriteArtifact(artifactory, cosmos.ArtifactSrcCatalog, srcConfiguredCatalog); err != nil {
+		return nil, err
+	}
+	if err := w.App.WriteArtifact(artifactory, cosmos.ArtifactDstCatalog, dstConfiguredCatalog); err != nil {
 		return nil, err
 	}
 
@@ -229,7 +240,7 @@ func (w *Workflow) ReplicationActivity(ctx context.Context, run *cosmos.Run) (*c
 	defer cancel()
 
 	s1out, s1errc := w.App.Read(runctx, srcConnector, run.Options.WipeDestination)
-	s2out, s2errc := w.ProcessSourceConnectorOutput(runctx, s1out, runWrapper, attempt)
+	s2out, s2errc := w.ProcessSourceConnectorOutput(runctx, s1out, runWrapper, run.Sync, attempt)
 	s3out, s3errc := w.App.Write(runctx, dstConnector, s2out)
 	s4errc := w.ProcessDestinationConnectorOutput(runctx, s3out, runWrapper, attempt)
 
@@ -238,7 +249,7 @@ func (w *Workflow) ReplicationActivity(ctx context.Context, run *cosmos.Run) (*c
 	var finalErr error
 	for _, errc := range []<-chan error{s1errc, s2errc, s3errc, s4errc} {
 		if err := <-errc; err != nil {
-			workerArtifact.Println(err)
+			workerArtifact.Println(&cosmos.Log{Level: cosmos.LogLevelError, Message: err.Error()})
 			finalErr = err
 		}
 	}
@@ -287,7 +298,7 @@ func (w *Workflow) NormalizationActivity(ctx context.Context, run *cosmos.Run) (
 	var finalErr error
 	for _, errc := range []<-chan error{s1errc, s2errc} {
 		if err := <-errc; err != nil {
-			workerArtifact.Println(err)
+			workerArtifact.Println(&cosmos.Log{Level: cosmos.LogLevelError, Message: err.Error()})
 			finalErr = err
 		}
 	}
@@ -359,7 +370,7 @@ func (w *Workflow) DBUpdateActivity(ctx context.Context, run *cosmos.Run) error 
 	return err
 }
 
-func (w *Workflow) ProcessSourceConnectorOutput(ctx context.Context, in <-chan interface{}, run *RunWrapper, attempt int32) (<-chan *cosmos.Message, <-chan error) {
+func (w *Workflow) ProcessSourceConnectorOutput(ctx context.Context, in <-chan interface{}, run *RunWrapper, sync *cosmos.Sync, attempt int32) (<-chan *cosmos.Message, <-chan error) {
 	out := make(chan *cosmos.Message, 100)
 	errc := make(chan error, 1)
 
@@ -375,18 +386,24 @@ func (w *Workflow) ProcessSourceConnectorOutput(ctx context.Context, in <-chan i
 
 		for line := range in {
 			if msg, ok := line.(*cosmos.Message); ok {
-				if msg.Type == cosmos.MessageTypeRecord || msg.Type == cosmos.MessageTypeState {
+				if msg.Type == cosmos.MessageTypeRecord {
+					// Modify the record according to the namespace definition and stream prefix provided by the user.
+					sync.NamespaceMapper(msg.Record)
 					if err := sendMsgOnChannel(ctx, msg, out); err != nil {
 						break
 					}
-					if msg.Type == cosmos.MessageTypeRecord {
-						run.Lock()
-						run.Stats.NumRecords++
-						run.Unlock()
+					run.Lock()
+					run.Stats.NumRecords++
+					run.Unlock()
+				} else if msg.Type == cosmos.MessageTypeState {
+					if err := sendMsgOnChannel(ctx, msg, out); err != nil {
+						break
 					}
+				} else if msg.Type == cosmos.MessageTypeLog {
+					sourceArtifact.Println(msg.Log)
 				} else {
 					b, err := json.Marshal(msg)
-					if err != nil {
+					if err == nil {
 						sourceArtifact.Println(string(b))
 					}
 				}
@@ -417,6 +434,13 @@ func (w *Workflow) ProcessDestinationConnectorOutput(ctx context.Context, in <-c
 				run.Lock()
 				run.Sync.State = msg.State.Data
 				run.Unlock()
+			} else if msg.Type == cosmos.MessageTypeLog {
+				destinationArtifact.Println(msg.Log)
+			} else {
+				b, err := json.Marshal(msg)
+				if err == nil {
+					destinationArtifact.Println(string(b))
+				}
 			}
 		} else {
 			destinationArtifact.Println(line)
@@ -439,7 +463,14 @@ func (w *Workflow) ProcessNormalizationOutput(ctx context.Context, in <-chan int
 
 	for line := range in {
 		if msg, ok := line.(*cosmos.Message); ok {
-			_ = msg
+			if msg.Type == cosmos.MessageTypeLog {
+				normalizationArtifact.Println(msg.Log)
+			} else {
+				b, err := json.Marshal(msg)
+				if err == nil {
+					normalizationArtifact.Println(string(b))
+				}
+			}
 		} else {
 			normalizationArtifact.Println(line)
 		}

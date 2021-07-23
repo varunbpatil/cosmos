@@ -2,7 +2,15 @@ package cosmos
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
+)
+
+const (
+	NamespaceDefinitionSource      = "source"
+	NamespaceDefinitionDestination = "destination"
+	NamespaceDefinitionCustom      = "custom"
 )
 
 type Sync struct {
@@ -13,6 +21,9 @@ type Sync struct {
 	ScheduleInterval      int                    `json:"scheduleInterval"`
 	Enabled               bool                   `json:"enabled"`
 	BasicNormalization    bool                   `json:"basicNormalization"`
+	NamespaceDefinition   string                 `json:"namespaceDefinition"`
+	NamespaceFormat       string                 `json:"namespaceFormat"`
+	StreamPrefix          string                 `json:"streamPrefix"`
 	State                 map[string]interface{} `json:"state"`
 	Config                Form                   `json:"config"`
 	ConfiguredCatalog     Message                `json:"configuredCatalog"`
@@ -33,17 +44,65 @@ func (s *Sync) Validate() error {
 		return Errorf(EINVALID, "A destination endpoint must be selected")
 	} else if s.ScheduleInterval < 0 {
 		return Errorf(EINVALID, "Schedule interval must be greater than or equal to 0")
+	} else if err := s.hasValidNamespaceDefinition(); err != nil {
+		return Errorf(EINVALID, err.Error())
 	}
 	return nil
 }
 
+func (s *Sync) hasValidNamespaceDefinition() error {
+	switch s.NamespaceDefinition {
+	case NamespaceDefinitionSource, NamespaceDefinitionDestination:
+	case NamespaceDefinitionCustom:
+		if len(strings.TrimSpace(s.NamespaceFormat)) == 0 {
+			return fmt.Errorf("Custom namespace definition requires a non-empty namespace format")
+		}
+	default:
+		return fmt.Errorf("Invalid namespace definition: %s", s.NamespaceDefinition)
+	}
+	return nil
+}
+
+func (s *Sync) NamespaceMapper(obj interface{}) {
+	var streamName *string
+	var namespace **string
+
+	switch v := obj.(type) {
+	case *Stream:
+		streamName = &v.Name
+		namespace = &v.Namespace
+	case *Record:
+		streamName = &v.Stream
+		namespace = &v.Namespace
+	default:
+		panic("Invalid type for namespace mapping")
+	}
+
+	*streamName = s.StreamPrefix + *streamName
+	if s.NamespaceDefinition == NamespaceDefinitionSource {
+		// nothing to do here.
+	} else if s.NamespaceDefinition == NamespaceDefinitionDestination {
+		*namespace = nil
+	} else if s.NamespaceDefinition == NamespaceDefinitionCustom {
+		replaceWith := ""
+		if *namespace != nil {
+			replaceWith = **namespace
+		}
+		customNamespace := strings.ReplaceAll(s.NamespaceFormat, "${SOURCE_NAMESPACE}", replaceWith)
+		*namespace = &customNamespace
+	}
+}
+
 type SyncUpdate struct {
-	Name               *string                 `json:"name"`
-	Config             *Form                   `json:"config"`
-	ScheduleInterval   *int                    `json:"scheduleInterval"`
-	Enabled            *bool                   `json:"enabled"`
-	BasicNormalization *bool                   `json:"basicNormalization"`
-	State              *map[string]interface{} `json:"state"`
+	Name                *string                 `json:"name"`
+	Config              *Form                   `json:"config"`
+	ScheduleInterval    *int                    `json:"scheduleInterval"`
+	Enabled             *bool                   `json:"enabled"`
+	BasicNormalization  *bool                   `json:"basicNormalization"`
+	NamespaceDefinition *string                 `json:"namespaceDefinition"`
+	NamespaceFormat     *string                 `json:"namespaceFormat"`
+	StreamPrefix        *string                 `json:"streamPrefix"`
+	State               *map[string]interface{} `json:"state"`
 }
 
 type SyncFilter struct {
@@ -102,6 +161,15 @@ func (a *App) UpdateSync(ctx context.Context, id int, upd *SyncUpdate) (*Sync, e
 	}
 	if v := upd.BasicNormalization; v != nil {
 		sync.BasicNormalization = *v
+	}
+	if v := upd.NamespaceDefinition; v != nil {
+		sync.NamespaceDefinition = *v
+	}
+	if v := upd.NamespaceFormat; v != nil {
+		sync.NamespaceFormat = *v
+	}
+	if v := upd.StreamPrefix; v != nil {
+		sync.StreamPrefix = *v
 	}
 	if v := upd.Config; v != nil {
 		sync.Config = *v

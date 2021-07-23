@@ -41,6 +41,7 @@ type FormFieldSpec struct {
 
 type FormFieldCatalog struct {
 	Stream              Stream     `json:"stream"`
+	StreamNamespace     *string    `json:"streamNamespace"`
 	StreamName          string     `json:"streamName"`
 	IsStreamSelected    bool       `json:"isStreamSelected"`
 	SyncModes           [][]string `json:"syncModes"`

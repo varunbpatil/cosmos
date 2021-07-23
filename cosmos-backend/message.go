@@ -2,6 +2,7 @@ package cosmos
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/iancoleman/orderedmap"
 )
@@ -48,6 +49,27 @@ type Message struct {
 type Log struct {
 	Level   string `json:"level,omitempty"`
 	Message string `json:"message,omitempty"`
+}
+
+func (l *Log) String() string {
+	// See https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html for ansi colors.
+	colorPrefix := ""
+	colorReset := "\u001b[0m"
+
+	switch l.Level {
+	case LogLevelFatal, LogLevelError:
+		colorPrefix = "\u001b[31m"
+	case LogLevelWarn:
+		colorPrefix = "\u001b[33m"
+	case LogLevelInfo:
+		colorPrefix = "\u001b[32m"
+	case LogLevelDebug, LogLevelTrace:
+		colorPrefix = "\u001b[34m"
+	default:
+		panic("Unknown log level")
+	}
+
+	return fmt.Sprintf("%s%s%s %s", colorPrefix, l.Level, colorReset, l.Message)
 }
 
 type Spec struct {
@@ -114,6 +136,10 @@ func (m *Message) String() string {
 }
 
 func (s *Stream) IsSyncModeAvailable(syncMode string) bool {
+	// SyncModeFullRefresh is supported by all sources even if sync.SupportedSyncModes is empty.
+	if syncMode == SyncModeFullRefresh {
+		return true
+	}
 	for _, s := range s.SupportedSyncModes {
 		if s == syncMode {
 			return true

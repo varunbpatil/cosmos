@@ -29,6 +29,7 @@ Along the way, I added a few nice touches to the UI.
 | Connectors | These are the usual Airbyte [connectors](https://docs.airbyte.io/integrations).                                                                                                                                                                                    |
 | Endpoints  | Actual physical endpoints in your origanization. For example, a PostgreSQL server running at X.X.X.X:5432 is one *endpoint* while a PostgreSQL server running at Y.Y.Y.Y:5432 is a second *endpoint* although both endpoints make use of the Postgres *connector*. |
 | Syncs      | A *sync* is nothing more than a connection between two *endpoints* describing the way that data should be replicated between those two *endpoints*.                                                                                                                |
+| Runs       | A *run* is an instance of a *sync* with a unique execution date.                                                                                                                                                                                                   |
 
 ## Getting started
 

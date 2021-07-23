@@ -101,6 +101,9 @@ func findSyncs(ctx context.Context, tx *Tx, filter cosmos.SyncFilter) ([]*cosmos
 			schedule_interval,
 			enabled,
 			basic_normalization,
+			namespace_definition,
+			namespace_format,
+			stream_prefix,
 			state,
 			config,
 			configured_catalog,
@@ -132,6 +135,9 @@ func findSyncs(ctx context.Context, tx *Tx, filter cosmos.SyncFilter) ([]*cosmos
 			&sync.ScheduleInterval,
 			&sync.Enabled,
 			&sync.BasicNormalization,
+			&sync.NamespaceDefinition,
+			&sync.NamespaceFormat,
+			&sync.StreamPrefix,
 			(*Map)(&sync.State),
 			(*Form)(&sync.Config),
 			(*Message)(&sync.ConfiguredCatalog),
@@ -182,13 +188,16 @@ func createSync(ctx context.Context, tx *Tx, sync *cosmos.Sync) error {
 			schedule_interval,
 			enabled,
 			basic_normalization,
+			namespace_definition,
+			namespace_format,
+			stream_prefix,
 			state,
 			config,
 			configured_catalog,
 			created_at,
 			updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id
 	`,
 		sync.Name,
@@ -197,6 +206,9 @@ func createSync(ctx context.Context, tx *Tx, sync *cosmos.Sync) error {
 		sync.ScheduleInterval,
 		sync.Enabled,
 		sync.BasicNormalization,
+		sync.NamespaceDefinition,
+		sync.NamespaceFormat,
+		sync.StreamPrefix,
 		(*Map)(&sync.State),
 		(*Form)(&sync.Config),
 		(*Message)(&sync.ConfiguredCatalog),
@@ -224,12 +236,15 @@ func updateSync(ctx context.Context, tx *Tx, id int, sync *cosmos.Sync) error {
 			schedule_interval = $4,
 			enabled = $5,
 			basic_normalization = $6,
-			state = $7,
-			config = $8,
-			configured_catalog = $9,
-			updated_at = $10
+			namespace_definition = $7,
+			namespace_format = $8,
+			stream_prefix = $9,
+			state = $10,
+			config = $11,
+			configured_catalog = $12,
+			updated_at = $13
 		WHERE
-			id = $11
+			id = $14
 	`,
 		sync.Name,
 		sync.SourceEndpointID,
@@ -237,6 +252,9 @@ func updateSync(ctx context.Context, tx *Tx, id int, sync *cosmos.Sync) error {
 		sync.ScheduleInterval,
 		sync.Enabled,
 		sync.BasicNormalization,
+		sync.NamespaceDefinition,
+		sync.NamespaceFormat,
+		sync.StreamPrefix,
 		(*Map)(&sync.State),
 		(*Form)(&sync.Config),
 		(*Message)(&sync.ConfiguredCatalog),

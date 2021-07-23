@@ -72,6 +72,40 @@
           class="pt-3"
         ></v-text-field>
 
+        <!--Namespace Definition-->
+        <v-autocomplete
+          outlined
+          :items="namespaceDef"
+          v-model="sync.namespaceDefinition"
+          label="Namespace on the destination"
+          color="indigo"
+          item-color="indigo"
+          class="pt-3"
+        ></v-autocomplete>
+
+        <!--Namespace format for custom namespace definition-->
+        <v-text-field
+          outlined
+          v-if='sync.namespaceDefinition == "custom"'
+          v-model.trim="sync.namespaceFormat"
+          label="Custom namespace format"
+          placeholder="foo_${SOURCE_NAMESPACE}_bar"
+          hint="The placeholder text - ${SOURCE_NAMESPACE} - will be replaced with the actual source namespace"
+          color="indigo"
+          class="pt-3"
+        ></v-text-field>
+
+        <!--Stream prefix-->
+        <v-text-field
+          outlined
+          v-model.trim="sync.streamPrefix"
+          label="Stream prefix"
+          placeholder="cosmos_"
+          hint="All streams on the destination will be prefixed with this string"
+          color="indigo"
+          class="pt-3"
+        ></v-text-field>
+
         <!--Basic Normalization-->
         <v-switch
           v-if="supportsNormalization(sync.destinationEndpointID)"
@@ -88,7 +122,7 @@
             <v-col cols="12" md="5">
               <v-checkbox
                 v-model="f.isStreamSelected"
-                :label="f.streamName"
+                :label="f.streamNamespace ? f.streamNamespace + '.' + f.streamName : f.streamName"
                 class="py-0"
                 color="indigo"
               ></v-checkbox>
@@ -101,7 +135,7 @@
                   v-model="f.selectedSyncMode"
                   label="Select sync mode"
                   :items="f.syncModes"
-                  :item-text="(item) => item.join(' - ')"
+                  :item-text="(item) => {let itemCopy = ['Source: ' + item[0], 'Destination: ' + item[1]]; return itemCopy.join(' | ')}"
                   return-object
                   color="indigo"
                   item-color="indigo"
@@ -164,6 +198,9 @@ export default {
         destinationEndpointID: null, // the v-autocomplete component sets this to the appropriate value (see 'item-value' prop)
         scheduleInterval: null,
         basicNormalization: false,
+        namespaceDefinition: "source",
+        namespaceFormat: null,
+        streamPrefix: null,
         config: null,
       },
       endpoints: [], // this has to be a non-null value for v-autocomplete to be rendered correctly.
@@ -171,6 +208,11 @@ export default {
       dialog: false,
       loading: false,
       error: null,
+      namespaceDef: [
+        {text: "Same as source namespace", value: "source"},
+        {text: "Namespace defined in the destination connector", value: "destination"},
+        {text: "Custom namespace", value: "custom"},
+      ],
     }
   },
 
@@ -196,6 +238,9 @@ export default {
         this.sync.destinationEndpointID = null
         this.sync.scheduleInterval = null
         this.sync.basicNormalization = false
+        this.sync.namespaceDefinition = "source"
+        this.sync.namespaceFormat = null
+        this.sync.streamPrefix = null
         this.sync.config = null
         this.endpoints = [] // this has to be an empty array, otherwise v-autocomplete will throw errors.
         this.form = null

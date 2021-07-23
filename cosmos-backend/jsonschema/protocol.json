@@ -85,7 +85,7 @@
                 "stream": {"type": "string"},
                 "data": {"type": "object"},
                 "emitted_at": {"type": "integer"},
-                "namespace": {"type": "string"}
+                "namespace": {"type": ["string", "null"]}
             }
         },
 
@@ -194,7 +194,8 @@
                 },
                 "supported_sync_modes": {
                     "type": "array",
-                    "items": {"$ref": "#/definitions/SyncMode"}
+                    "items": {"$ref": "#/definitions/SyncMode"},
+                    "default": ["full_refresh"]
                 },
                 "source_defined_cursor": {
                     "type": "boolean"
@@ -210,7 +211,7 @@
                         "items": {"type": "string"}
                     }
                 },
-                "namespace": {"type": "string"}
+                "namespace": {"type": ["string", "null"]}
             }
         },
 

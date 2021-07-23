@@ -80,6 +80,40 @@
             class="pt-3"
           ></v-text-field>
 
+          <!--Namespace Definition-->
+          <v-autocomplete
+            outlined
+            :items="namespaceDef"
+            v-model="localSync.namespaceDefinition"
+            label="Namespace on the destination"
+            color="indigo"
+            item-color="indigo"
+            class="pt-3"
+          ></v-autocomplete>
+
+          <!--Namespace format for custom namespace definition-->
+          <v-text-field
+            outlined
+            v-if='localSync.namespaceDefinition == "custom"'
+            v-model.trim="localSync.namespaceFormat"
+            label="Custom namespace format"
+            placeholder="foo_${SOURCE_NAMESPACE}_bar"
+            hint="The placeholder text - ${SOURCE_NAMESPACE} - will be replaced with the actual source namespace"
+            color="indigo"
+            class="pt-3"
+          ></v-text-field>
+
+          <!--Stream prefix-->
+          <v-text-field
+            outlined
+            v-model.trim="localSync.streamPrefix"
+            label="Stream prefix"
+            placeholder="cosmos_"
+            hint="All streams on the destination will be prefixed with this string"
+            color="indigo"
+            class="pt-3"
+          ></v-text-field>
+
           <!--Basic Normalization-->
           <v-switch
             v-if="supportsNormalization(localSync.destinationEndpointID)"
@@ -96,7 +130,7 @@
               <v-col cols="12" md="5">
                 <v-checkbox
                   v-model="f.isStreamSelected"
-                  :label="f.streamName"
+                  :label="f.streamNamespace ? f.streamNamespace + '.' + f.streamName : f.streamName"
                   class="py-0"
                   color="indigo"
                 ></v-checkbox>
@@ -109,7 +143,7 @@
                     v-model="f.selectedSyncMode"
                     label="Select sync mode"
                     :items="f.syncModes"
-                    :item-text="(item) => item.join(' - ')"
+                    :item-text="(item) => {let itemCopy = ['Source: ' + item[0], 'Destination: ' + item[1]]; return itemCopy.join(' | ')}"
                     return-object
                     color="indigo"
                     item-color="indigo"
@@ -209,6 +243,11 @@ export default {
           title: "clear destination data",
           handler: this.clearDestinationData
         }
+      ],
+      namespaceDef: [
+        {text: "Same as source namespace", value: "source"},
+        {text: "Namespace defined in the destination connector", value: "destination"},
+        {text: "Custom namespace", value: "custom"},
       ],
     }
   },
@@ -331,6 +370,9 @@ export default {
             config: _sync.config,
             scheduleInterval: _sync.scheduleInterval,
             basicNormalization: _sync.basicNormalization,
+            namespaceDefinition: _sync.namespaceDefinition,
+            namespaceFormat: _sync.namespaceFormat,
+            streamPrefix: _sync.streamPrefix,
           }
         )
         .then(() => {

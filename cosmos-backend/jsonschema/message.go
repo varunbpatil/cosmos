@@ -209,6 +209,7 @@ func (s *MessageService) MessageToForm(ctx context.Context, message *cosmos.Mess
 			var field cosmos.FormFieldCatalog
 
 			field.Stream = stream
+			field.StreamNamespace = stream.Namespace
 			field.StreamName = stream.Name
 			field.IsStreamSelected = true
 

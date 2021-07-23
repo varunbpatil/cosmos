@@ -102,6 +102,7 @@ func (m *Main) startup() error {
 
 	is now accepting connections at %s
 
+
 	`, "http://localhost:5000")
 
 	return nil
