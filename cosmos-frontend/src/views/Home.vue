@@ -5,15 +5,6 @@
         <div class="text-h2 font-weight-thin mb-8 white--text">
           COSMOS
         </div>
-        <div class="text-h6 white--text font-italic font-weight-light">
-          “<span class="font-weight-medium">Cosmos</span> is a Greek word for the order of the universe.
-          It is, in a way, the opposite of <span class="font-weight-medium">Chaos</span>.
-          It implies the deep <span class="font-weight-medium">interconnectedness</span> of all things.
-          It conveys awe for the intricate and subtle way in which the universe is put together.”
-        </div>
-        <div class="text-h6 white--text font-italic font-weight-light text-right">
-          - Carl Sagan
-        </div>
       </v-col>
     </v-row>
   </div>

@@ -20,8 +20,8 @@
     <v-card flat v-if="data" class="mt-6">
       <v-card-text style="overflow: auto">
         <pre
-          class="grey--text text--darken-3 font-weight-medium"
-          style="font-family: 'Inconsolata', monospace; font-size: 1.2em"
+          class="grey--text text--darken-3"
+          style="font-family: 'Roboto Mono', monospace;"
           v-html="pretty(data)"
         ></pre>
       </v-card-text>
